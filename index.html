@@ -1,132 +1,110 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>UML Force Graph - Highlight & Label</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #0b0e2c; /* ✅ updated background */
-    }
-    #3d-graph {
-      width: 100vw;
-      height: 100vh;
-    }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
-</head>
-<body>
-  <div id="3d-graph"></div>
+<script>
+  const gData = {
+    nodes: [
+      { id: 'Application' },
+      { id: 'User' },
+      { id: 'Organisation' },
+      { id: 'Role' },
+      { id: 'Permission' },
+      { id: 'AuditLog' }
+    ],
+    links: [
+      { source: 'Application', target: 'User' },
+      { source: 'User', target: 'Role' },
+      { source: 'Role', target: 'Permission' },
+      { source: 'Organisation', target: 'User' },
+      { source: 'Application', target: 'AuditLog' }
+    ]
+  };
 
-  <script>
-    const gData = {
-      nodes: [
-        { id: 'Application' },
-        { id: 'User' },
-        { id: 'Organisation' },
-        { id: 'Role' },
-        { id: 'Permission' },
-        { id: 'AuditLog' }
-      ],
-      links: [
-        { source: 'Application', target: 'User' },
-        { source: 'User', target: 'Role' },
-        { source: 'Role', target: 'Permission' },
-        { source: 'Organisation', target: 'User' },
-        { source: 'Application', target: 'AuditLog' }
-      ]
-    };
+  let highlightedNodeIds = new Set();
+  let highlightedLinks = new Set();
 
-    let highlightNodes = new Set();
-    let highlightLinks = new Set();
+  const Graph = ForceGraph3D()
+    (document.getElementById('3d-graph'))
+    .graphData(gData)
+    .backgroundColor("#0b0e2c")
+    .nodeAutoColorBy("id")
+    .nodeLabel(node => node.id) // ✅ Tooltip on hover
+    .linkWidth(link => highlightedLinks.has(link) ? 4 : 1)
+    .linkColor(link => highlightedLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.15)')
+    .nodeThreeObject(node => {
+      const group = new THREE.Group();
 
-    const Graph = ForceGraph3D()
-      (document.getElementById('3d-graph'))
-      .graphData(gData)
-      .backgroundColor("#0b0e2c") // ✅ updated background
-      .nodeAutoColorBy("id")
-      .linkWidth(link => highlightLinks.has(link) ? 4 : 1)
-      .linkColor(link => highlightLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.15)')
-      .nodeThreeObject(node => {
-        const group = new THREE.Group();
+      const geometry = new THREE.SphereGeometry(4, 32, 32);
+      const material = new THREE.MeshStandardMaterial({
+        color: highlightedNodeIds.has(node.id) ? 'orange' : node.color
+      });
+      const sphere = new THREE.Mesh(geometry, material);
+      group.add(sphere);
 
-        // Sphere
-        const geometry = new THREE.SphereGeometry(4, 32, 32);
-        const material = new THREE.MeshStandardMaterial({
-          color: highlightNodes.has(node.id) ? 'orange' : node.color
-        });
-        const sphere = new THREE.Mesh(geometry, material);
-        group.add(sphere);
+      // Show label sprite only if highlighted
+      if (highlightedNodeIds.has(node.id)) {
+        const label = makeTextSprite(node.id);
+        label.position.set(0, 10, 0);
+        group.add(label);
+      }
 
-        // Label (only show if highlighted)
-        if (highlightNodes.has(node.id)) {
-          const sprite = makeTextSprite(node.id);
-          sprite.position.set(0, 10, 0);
-          group.add(sprite);
+      return group;
+    })
+    .nodeThreeObjectExtend(true)
+    .onNodeClick(node => {
+      // Clear old highlights
+      highlightedNodeIds.clear();
+      highlightedLinks.clear();
+
+      // Add clicked node
+      highlightedNodeIds.add(node.id);
+
+      // Add connected nodes and links
+      gData.links.forEach(link => {
+        const src = typeof link.source === 'object' ? link.source.id : link.source;
+        const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+
+        if (src === node.id) {
+          highlightedNodeIds.add(tgt);
+          highlightedLinks.add(link);
+        } else if (tgt === node.id) {
+          highlightedNodeIds.add(src);
+          highlightedLinks.add(link);
         }
+      });
 
-        return group;
-      })
-      .nodeThreeObjectExtend(true)
-      .onNodeClick(node => {
-        // Reset highlights
-        highlightNodes = new Set();
-        highlightLinks = new Set();
+      // Refresh graph visuals
+      Graph.nodeThreeObject(Graph.nodeThreeObject);
+      Graph.linkWidth(Graph.linkWidth);
+      Graph.linkColor(Graph.linkColor);
 
-        // Add node itself
-        highlightNodes.add(node.id);
+      // Zoom to clicked node
+      const distance = 40;
+      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+      Graph.cameraPosition(
+        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+        node,
+        3000
+      );
+    })
+    .lights([
+      new THREE.AmbientLight(0xcccccc, 1.5),
+      new THREE.DirectionalLight(0xffffff, 0.6)
+    ]);
 
-        gData.links.forEach(link => {
-          const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-          const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+  // Text label sprite
+  function makeTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = "24px Arial";
+    context.fillStyle = "white";
+    context.fillText(text, 4, 24);
 
-          if (sourceId === node.id) {
-            highlightNodes.add(targetId);
-            highlightLinks.add(link);
-          } else if (targetId === node.id) {
-            highlightNodes.add(sourceId);
-            highlightLinks.add(link);
-          }
-        });
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(30, 15, 1.0);
+    return sprite;
+  }
+</script>
 
-        // Re-render with highlights
-        Graph.nodeThreeObject(Graph.nodeThreeObject);
-        Graph.linkWidth(Graph.linkWidth);
-        Graph.linkColor(Graph.linkColor);
-
-        // Recenter camera
-        const distance = 40;
-        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-        Graph.cameraPosition(
-          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-          node,
-          3000
-        );
-      })
-      .lights([
-        new THREE.AmbientLight(0xcccccc, 1.5),
-        new THREE.DirectionalLight(0xffffff, 0.6)
-      ]);
-
-    // Function to create label sprite
-    function makeTextSprite(text) {
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      context.font = "24px Arial";
-      context.fillStyle = "white";
-      context.fillText(text, 4, 24);
-
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(30, 15, 1.0); // size of label
-      return sprite;
-    }
-  </script>
-</body>
-</html>
 
 
 
