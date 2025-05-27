@@ -57,7 +57,7 @@
       const sphere = new THREE.Mesh(geometry, material);
       group.add(sphere);
 
-      // Add label if highlighted
+      // Add label if highlighted (clicked or neighbor)
       if (highlightedNodeIds.has(node.id)) {
         const label = makeTextSprite(node.id);
         label.position.set(0, 10, 0);
@@ -73,16 +73,16 @@
 
       highlightedNodeIds.add(node.id);
 
-      // Highlight connected links and nodes
+      // Highlight connected links and neighbor nodes
       gData.links.forEach(link => {
         const src = typeof link.source === 'object' ? link.source.id : link.source;
         const tgt = typeof link.target === 'object' ? link.target.id : link.target;
 
         if (src === node.id) {
-          highlightedNodeIds.add(tgt);
+          highlightedNodeIds.add(tgt); // neighbor
           highlightedLinks.add(link);
         } else if (tgt === node.id) {
-          highlightedNodeIds.add(src);
+          highlightedNodeIds.add(src); // neighbor
           highlightedLinks.add(link);
         }
       });
