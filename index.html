@@ -36,14 +36,7 @@
   };
 
   let highlightedNodeIds = new Set();
-  let highlightedLinkIds = new Set(); // Use string IDs for links
-
-  // Helper to get unique link ID (handles both string and object)
-  function linkId(link) {
-    const src = typeof link.source === 'object' ? link.source.id : link.source;
-    const tgt = typeof link.target === 'object' ? link.target.id : link.target;
-    return `${src}--${tgt}`;
-  }
+  let highlightedLinks = new Set(); // Store link objects directly
 
   // Create graph instance
   const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
@@ -52,13 +45,12 @@
     .nodeAutoColorBy("id")
     .nodeLabel(node => node.id)
     .linkWidth(link => {
-      // If nothing is highlighted, show all links as normal
-      if (highlightedLinkIds.size === 0) return 2;
-      return highlightedLinkIds.has(linkId(link)) ? 6 : 0.5;
+      if (highlightedLinks.size === 0) return 2;
+      return highlightedLinks.has(link) ? 6 : 0.5;
     })
     .linkColor(link => {
-      if (highlightedLinkIds.size === 0) return '#ffffff';
-      return highlightedLinkIds.has(linkId(link)) ? 'cyan' : '#ffffff';
+      if (highlightedLinks.size === 0) return '#ffffff';
+      return highlightedLinks.has(link) ? 'cyan' : '#ffffff';
     })
     .nodeThreeObject(node => {
       const group = new THREE.Group();
@@ -83,21 +75,23 @@
     .nodeThreeObjectExtend(true)
     .onNodeClick(node => {
       highlightedNodeIds.clear();
-      highlightedLinkIds.clear();
+      highlightedLinks.clear();
 
       highlightedNodeIds.add(node.id);
 
-      // Highlight connected links and neighbor nodes
-      gData.links.forEach(link => {
-        const src = typeof link.source === 'object' ? link.source.id : link.source;
-        const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+      // Use gData.links (original data, always string ids) to find neighbors,
+      // but add the actual runtime link objects from Graph.graphData().links
+      const runtimeLinks = Graph.graphData().links;
 
+      gData.links.forEach((origLink, i) => {
+        const src = origLink.source;
+        const tgt = origLink.target;
         if (src === node.id) {
-          highlightedNodeIds.add(tgt); // neighbor
-          highlightedLinkIds.add(linkId(link));
+          highlightedNodeIds.add(tgt);
+          highlightedLinks.add(runtimeLinks[i]);
         } else if (tgt === node.id) {
-          highlightedNodeIds.add(src); // neighbor
-          highlightedLinkIds.add(linkId(link));
+          highlightedNodeIds.add(src);
+          highlightedLinks.add(runtimeLinks[i]);
         }
       });
 
