@@ -4,8 +4,15 @@
   <meta charset="utf-8">
   <title>UML Force Graph - Highlight & Label</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #3d-graph { width: 100vw; height: 100vh; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #0b0e2c; /* ✅ updated background */
+    }
+    #3d-graph {
+      width: 100vw;
+      height: 100vh;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
@@ -38,7 +45,7 @@
     const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
       .graphData(gData)
-      .backgroundColor("#000000")
+      .backgroundColor("#0b0e2c") // ✅ updated background
       .nodeAutoColorBy("id")
       .linkWidth(link => highlightLinks.has(link) ? 4 : 1)
       .linkColor(link => highlightLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.15)')
@@ -120,6 +127,7 @@
   </script>
 </body>
 </html>
+
 
 
 
