@@ -2,13 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>UML Force Graph</title>
+  <title>UML Force Graph - Highlight & Label</title>
   <style>
     body { margin: 0; overflow: hidden; background: #000; }
     #3d-graph { width: 100vw; height: 100vh; }
   </style>
-
-  <!-- Include dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
 </head>
@@ -16,7 +14,6 @@
   <div id="3d-graph"></div>
 
   <script>
-    // Sample UML-like structure
     const gData = {
       nodes: [
         { id: 'Application' },
@@ -35,26 +32,64 @@
       ]
     };
 
+    let highlightNodes = new Set();
+    let highlightLinks = new Set();
+
     const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
       .graphData(gData)
       .backgroundColor("#000000")
       .nodeAutoColorBy("id")
-      .nodeLabel(node => node.id)
-      .linkColor(() => "rgba(255,255,255,0.15)")
-      .linkWidth(1)
-      .linkOpacity(0.5)
-      .nodeOpacity(0.9)
+      .linkWidth(link => highlightLinks.has(link) ? 4 : 1)
+      .linkColor(link => highlightLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.15)')
       .nodeThreeObject(node => {
-        // Custom spherical nodes (smooth, consistent with vasturiano)
+        const group = new THREE.Group();
+
+        // Sphere
         const geometry = new THREE.SphereGeometry(4, 32, 32);
-        const material = new THREE.MeshStandardMaterial({ color: node.color });
+        const material = new THREE.MeshStandardMaterial({
+          color: highlightNodes.has(node.id) ? 'orange' : node.color
+        });
         const sphere = new THREE.Mesh(geometry, material);
-        return sphere;
+        group.add(sphere);
+
+        // Label (only show if highlighted)
+        if (highlightNodes.has(node.id)) {
+          const sprite = makeTextSprite(node.id);
+          sprite.position.set(0, 10, 0);
+          group.add(sprite);
+        }
+
+        return group;
       })
       .nodeThreeObjectExtend(true)
       .onNodeClick(node => {
-        // Zoom to node
+        // Reset highlights
+        highlightNodes = new Set();
+        highlightLinks = new Set();
+
+        // Add node itself
+        highlightNodes.add(node.id);
+
+        gData.links.forEach(link => {
+          const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+          const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+
+          if (sourceId === node.id) {
+            highlightNodes.add(targetId);
+            highlightLinks.add(link);
+          } else if (targetId === node.id) {
+            highlightNodes.add(sourceId);
+            highlightLinks.add(link);
+          }
+        });
+
+        // Re-render with highlights
+        Graph.nodeThreeObject(Graph.nodeThreeObject);
+        Graph.linkWidth(Graph.linkWidth);
+        Graph.linkColor(Graph.linkColor);
+
+        // Recenter camera
         const distance = 40;
         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
         Graph.cameraPosition(
@@ -62,16 +97,29 @@
           node,
           3000
         );
-      });
-
-    // Add lighting like vasturiano's version
-    Graph
+      })
       .lights([
         new THREE.AmbientLight(0xcccccc, 1.5),
         new THREE.DirectionalLight(0xffffff, 0.6)
       ]);
+
+    // Function to create label sprite
+    function makeTextSprite(text) {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = "24px Arial";
+      context.fillStyle = "white";
+      context.fillText(text, 4, 24);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(30, 15, 1.0); // size of label
+      return sprite;
+    }
   </script>
 </body>
 </html>
+
 
 
