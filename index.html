@@ -1,98 +1,117 @@
-<script>
-  const gData = {
-    nodes: [
-      { id: 'Application' },
-      { id: 'User' },
-      { id: 'Organisation' },
-      { id: 'Role' },
-      { id: 'Permission' },
-      { id: 'AuditLog' }
-    ],
-    links: [
-      { source: 'Application', target: 'User' },
-      { source: 'User', target: 'Role' },
-      { source: 'Role', target: 'Permission' },
-      { source: 'Organisation', target: 'User' },
-      { source: 'Application', target: 'AuditLog' }
-    ]
-  };
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>UML Interactive Graph</title>
+  <style>
+    body { margin: 0; background: #0b0e2c; }
+    #3d-graph { width: 100vw; height: 100vh; }
+  </style>
 
-  let highlightedNodeIds = new Set();
-  let highlightedLinks = new Set();
+  <!-- ✅ Load required libraries in correct order -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
 
-  const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
-    .graphData(gData)
-    .backgroundColor("#0b0e2c")
-    .nodeAutoColorBy("id")
-    .nodeLabel(node => node.id)
-    .linkWidth(link => highlightedLinks.has(link) ? 6 : 0.5) // ✨ thicker on highlight
-    .linkColor(link => highlightedLinks.has(link) ? 'cyan' : '#ffffff') // ✨ cyan highlight, white default
-    .nodeThreeObject(node => {
-      const group = new THREE.Group();
+<body>
+  <div id="3d-graph"></div>
 
-      const geometry = new THREE.SphereGeometry(4, 32, 32);
-      const material = new THREE.MeshStandardMaterial({
-        color: highlightedNodeIds.has(node.id) ? 'orange' : node.color
-      });
-      const sphere = new THREE.Mesh(geometry, material);
-      group.add(sphere);
+  <script>
+    const gData = {
+      nodes: [
+        { id: 'Application' },
+        { id: 'User' },
+        { id: 'Organisation' },
+        { id: 'Role' },
+        { id: 'Permission' },
+        { id: 'AuditLog' }
+      ],
+      links: [
+        { source: 'Application', target: 'User' },
+        { source: 'User', target: 'Role' },
+        { source: 'Role', target: 'Permission' },
+        { source: 'Organisation', target: 'User' },
+        { source: 'Application', target: 'AuditLog' }
+      ]
+    };
 
-      if (highlightedNodeIds.has(node.id)) {
-        const label = makeTextSprite(node.id);
-        label.position.set(0, 10, 0);
-        group.add(label);
-      }
+    let highlightedNodeIds = new Set();
+    let highlightedLinks = new Set();
 
-      return group;
-    })
-    .nodeThreeObjectExtend(true)
-    .onNodeClick(node => {
-      highlightedNodeIds.clear();
-      highlightedLinks.clear();
+    const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+      .graphData(gData)
+      .backgroundColor("#0b0e2c")
+      .nodeAutoColorBy("id")
+      .nodeLabel(node => node.id)
+      .linkWidth(link => highlightedLinks.has(link) ? 6 : 0.5)
+      .linkColor(link => highlightedLinks.has(link) ? 'cyan' : '#ffffff')
+      .nodeThreeObject(node => {
+        const group = new THREE.Group();
+        const geometry = new THREE.SphereGeometry(4, 32, 32);
+        const material = new THREE.MeshStandardMaterial({
+          color: highlightedNodeIds.has(node.id) ? 'orange' : node.color
+        });
+        const sphere = new THREE.Mesh(geometry, material);
+        group.add(sphere);
 
-      highlightedNodeIds.add(node.id);
-
-      gData.links.forEach(link => {
-        const src = typeof link.source === 'object' ? link.source.id : link.source;
-        const tgt = typeof link.target === 'object' ? link.target.id : link.target;
-
-        if (src === node.id) {
-          highlightedNodeIds.add(tgt);
-          highlightedLinks.add(link);
-        } else if (tgt === node.id) {
-          highlightedNodeIds.add(src);
-          highlightedLinks.add(link);
+        if (highlightedNodeIds.has(node.id)) {
+          const label = makeTextSprite(node.id);
+          label.position.set(0, 10, 0);
+          group.add(label);
         }
-      });
 
-      Graph.nodeThreeObject(Graph.nodeThreeObject); // Refresh nodes
-      Graph.linkWidth(Graph.linkWidth); // Refresh links
-      Graph.linkColor(Graph.linkColor);
+        return group;
+      })
+      .nodeThreeObjectExtend(true)
+      .onNodeClick(node => {
+        highlightedNodeIds.clear();
+        highlightedLinks.clear();
 
-      const distance = 40;
-      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-      Graph.cameraPosition(
-        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-        node,
-        3000
-      );
-    })
-    .lights([
-      new THREE.AmbientLight(0xcccccc, 1.5),
-      new THREE.DirectionalLight(0xffffff, 0.6)
-    ]);
+        highlightedNodeIds.add(node.id);
 
-  function makeTextSprite(text) {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    context.font = "24px Arial";
-    context.fillStyle = "white";
-    context.fillText(text, 4, 24);
+        gData.links.forEach(link => {
+          const src = typeof link.source === 'object' ? link.source.id : link.source;
+          const tgt = typeof link.target === 'object' ? link.target.id : link.target;
 
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture });
-    const sprite = new THREE.Sprite(material);
-    sprite.scale.set(30, 15, 1.0);
-    return sprite;
-  }
-</script>
+          if (src === node.id) {
+            highlightedNodeIds.add(tgt);
+            highlightedLinks.add(link);
+          } else if (tgt === node.id) {
+            highlightedNodeIds.add(src);
+            highlightedLinks.add(link);
+          }
+        });
+
+        Graph.nodeThreeObject(Graph.nodeThreeObject);
+        Graph.linkWidth(Graph.linkWidth);
+        Graph.linkColor(Graph.linkColor);
+
+        const distance = 40;
+        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+        Graph.cameraPosition(
+          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+          node,
+          3000
+        );
+      })
+      .lights([
+        new THREE.AmbientLight(0xcccccc, 1.5),
+        new THREE.DirectionalLight(0xffffff, 0.6)
+      ]);
+
+    function makeTextSprite(text) {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = "24px Arial";
+      context.fillStyle = "white";
+      context.fillText(text, 4, 24);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(30, 15, 1.0);
+      return sprite;
+    }
+  </script>
+</body>
+</html>
