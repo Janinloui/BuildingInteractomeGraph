@@ -1,4 +1,3 @@
-// index.js
 document.addEventListener('DOMContentLoaded', () => {
     const data = {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
