@@ -1,119 +1,98 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Interactive UML Graph</title>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    #3d-graph { width: 100vw; height: 100vh; }
-  </style>
-  <!-- Load libraries BEFORE your script -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
-</head>
-<body>
-  <div id="3d-graph"></div>
+<script>
+  const gData = {
+    nodes: [
+      { id: 'Application' },
+      { id: 'User' },
+      { id: 'Organisation' },
+      { id: 'Role' },
+      { id: 'Permission' },
+      { id: 'AuditLog' }
+    ],
+    links: [
+      { source: 'Application', target: 'User' },
+      { source: 'User', target: 'Role' },
+      { source: 'Role', target: 'Permission' },
+      { source: 'Organisation', target: 'User' },
+      { source: 'Application', target: 'AuditLog' }
+    ]
+  };
 
-  <script>
-    const gData = {
-      nodes: [
-        { id: 'Application' },
-        { id: 'User' },
-        { id: 'Organisation' },
-        { id: 'Role' },
-        { id: 'Permission' },
-        { id: 'AuditLog' }
-      ],
-      links: [
-        { source: 'Application', target: 'User' },
-        { source: 'User', target: 'Role' },
-        { source: 'Role', target: 'Permission' },
-        { source: 'Organisation', target: 'User' },
-        { source: 'Application', target: 'AuditLog' }
-      ]
-    };
+  let highlightedNodeIds = new Set();
+  let highlightedLinks = new Set();
 
-    let highlightedNodeIds = new Set();
-    let highlightedLinks = new Set();
+  const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+    .graphData(gData)
+    .backgroundColor("#0b0e2c")
+    .nodeAutoColorBy("id")
+    .nodeLabel(node => node.id)
+    .linkWidth(link => highlightedLinks.has(link) ? 6 : 0.5) // ✨ thicker on highlight
+    .linkColor(link => highlightedLinks.has(link) ? 'cyan' : '#ffffff') // ✨ cyan highlight, white default
+    .nodeThreeObject(node => {
+      const group = new THREE.Group();
 
-    const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
-      .graphData(gData)
-      .backgroundColor("#0b0e2c")
-      .nodeAutoColorBy("id")
-      .nodeLabel(node => node.id) // Tooltip on hover
-      .linkWidth(link => highlightedLinks.has(link) ? 4 : 1)
-      .linkColor(link => highlightedLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.15)')
-      .nodeThreeObject(node => {
-        const group = new THREE.Group();
+      const geometry = new THREE.SphereGeometry(4, 32, 32);
+      const material = new THREE.MeshStandardMaterial({
+        color: highlightedNodeIds.has(node.id) ? 'orange' : node.color
+      });
+      const sphere = new THREE.Mesh(geometry, material);
+      group.add(sphere);
 
-        // Sphere
-        const geometry = new THREE.SphereGeometry(4, 32, 32);
-        const material = new THREE.MeshStandardMaterial({
-          color: highlightedNodeIds.has(node.id) ? 'orange' : node.color
-        });
-        const sphere = new THREE.Mesh(geometry, material);
-        group.add(sphere);
+      if (highlightedNodeIds.has(node.id)) {
+        const label = makeTextSprite(node.id);
+        label.position.set(0, 10, 0);
+        group.add(label);
+      }
 
-        // Add label if highlighted
-        if (highlightedNodeIds.has(node.id)) {
-          const label = makeTextSprite(node.id);
-          label.position.set(0, 10, 0);
-          group.add(label);
+      return group;
+    })
+    .nodeThreeObjectExtend(true)
+    .onNodeClick(node => {
+      highlightedNodeIds.clear();
+      highlightedLinks.clear();
+
+      highlightedNodeIds.add(node.id);
+
+      gData.links.forEach(link => {
+        const src = typeof link.source === 'object' ? link.source.id : link.source;
+        const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+
+        if (src === node.id) {
+          highlightedNodeIds.add(tgt);
+          highlightedLinks.add(link);
+        } else if (tgt === node.id) {
+          highlightedNodeIds.add(src);
+          highlightedLinks.add(link);
         }
+      });
 
-        return group;
-      })
-      .nodeThreeObjectExtend(true)
-      .onNodeClick(node => {
-        highlightedNodeIds.clear();
-        highlightedLinks.clear();
+      Graph.nodeThreeObject(Graph.nodeThreeObject); // Refresh nodes
+      Graph.linkWidth(Graph.linkWidth); // Refresh links
+      Graph.linkColor(Graph.linkColor);
 
-        highlightedNodeIds.add(node.id);
+      const distance = 40;
+      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+      Graph.cameraPosition(
+        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+        node,
+        3000
+      );
+    })
+    .lights([
+      new THREE.AmbientLight(0xcccccc, 1.5),
+      new THREE.DirectionalLight(0xffffff, 0.6)
+    ]);
 
-        gData.links.forEach(link => {
-          const src = typeof link.source === 'object' ? link.source.id : link.source;
-          const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+  function makeTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = "24px Arial";
+    context.fillStyle = "white";
+    context.fillText(text, 4, 24);
 
-          if (src === node.id) {
-            highlightedNodeIds.add(tgt);
-            highlightedLinks.add(link);
-          } else if (tgt === node.id) {
-            highlightedNodeIds.add(src);
-            highlightedLinks.add(link);
-          }
-        });
-
-        // Redraw
-        Graph.nodeThreeObject(Graph.nodeThreeObject);
-        Graph.linkWidth(Graph.linkWidth);
-        Graph.linkColor(Graph.linkColor);
-
-        const distance = 40;
-        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-        Graph.cameraPosition(
-          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-          node,
-          3000
-        );
-      })
-      .lights([
-        new THREE.AmbientLight(0xcccccc, 1.5),
-        new THREE.DirectionalLight(0xffffff, 0.6)
-      ]);
-
-    function makeTextSprite(text) {
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      context.font = "24px Arial";
-      context.fillStyle = "white";
-      context.fillText(text, 4, 24);
-
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(30, 15, 1.0);
-      return sprite;
-    }
-  </script>
-</body>
-</html>
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(30, 15, 1.0);
+    return sprite;
+  }
+</script>
