@@ -2,18 +2,21 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Interactive UML Graph</title>
+  <title>UML Force Graph</title>
   <style>
-    body { margin: 0; background: #000; }
-    #3d-graph { width: 100vw; height: 100vh; display: block; }
+    body { margin: 0; overflow: hidden; background: #000; }
+    #3d-graph { width: 100vw; height: 100vh; }
   </style>
+
+  <!-- Include dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
 </head>
 <body>
   <div id="3d-graph"></div>
 
   <script>
-    // Dummy graph data (based on typical UML components)
+    // Sample UML-like structure
     const gData = {
       nodes: [
         { id: 'Application' },
@@ -32,41 +35,26 @@
       ]
     };
 
-    const highlightNodes = new Set();
-    const highlightLinks = new Set();
-    let hoverNode = null;
-
     const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
       .graphData(gData)
-      .nodeAutoColorBy('id')
+      .backgroundColor("#000000")
+      .nodeAutoColorBy("id")
       .nodeLabel(node => node.id)
-      .linkWidth(link => highlightLinks.has(link) ? 4 : 1)
-      .linkColor(link => highlightLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.2)')
-      .nodeColor(node => highlightNodes.has(node) ? 'orange' : node.color)
+      .linkColor(() => "rgba(255,255,255,0.15)")
+      .linkWidth(1)
+      .linkOpacity(0.5)
+      .nodeOpacity(0.9)
+      .nodeThreeObject(node => {
+        // Custom spherical nodes (smooth, consistent with vasturiano)
+        const geometry = new THREE.SphereGeometry(4, 32, 32);
+        const material = new THREE.MeshStandardMaterial({ color: node.color });
+        const sphere = new THREE.Mesh(geometry, material);
+        return sphere;
+      })
+      .nodeThreeObjectExtend(true)
       .onNodeClick(node => {
-        // Highlight neighbors
-        highlightNodes.clear();
-        highlightLinks.clear();
-
-        gData.links.forEach(link => {
-          if (link.source.id === node.id) {
-            highlightNodes.add(link.target);
-            highlightLinks.add(link);
-          } else if (link.target.id === node.id) {
-            highlightNodes.add(link.source);
-            highlightLinks.add(link);
-          }
-        });
-
-        highlightNodes.add(node); // also highlight the selected node
-
-        // Refresh
-        Graph.nodeColor(Graph.nodeColor());
-        Graph.linkWidth(Graph.linkWidth());
-        Graph.linkColor(Graph.linkColor());
-
-        // Move camera to focus on node
+        // Zoom to node
         const distance = 40;
         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
         Graph.cameraPosition(
@@ -75,7 +63,15 @@
           3000
         );
       });
+
+    // Add lighting like vasturiano's version
+    Graph
+      .lights([
+        new THREE.AmbientLight(0xcccccc, 1.5),
+        new THREE.DirectionalLight(0xffffff, 0.6)
+      ]);
   </script>
 </body>
 </html>
+
 
