@@ -1,6 +1,6 @@
 function createGraph(data) {
     const ctx = document.getElementById('myChart').getContext('2d');
-    const myChart = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'line',
         data: {
             labels: data.labels,
@@ -21,6 +21,4 @@ function createGraph(data) {
             }
         }
     });
-
-    return myChart;
 }

@@ -4,5 +4,5 @@ document.addEventListener('DOMContentLoaded', () => {
         values: [10, 20, 15, 25, 30]
     };
 
-    createGraph(data);
+    createGraph(data);  // This function is defined in graph.js
 });
