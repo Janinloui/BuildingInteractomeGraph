@@ -36,7 +36,14 @@
   };
 
   let highlightedNodeIds = new Set();
-  let highlightedLinks = new Set();
+  let highlightedLinkIds = new Set(); // Use string IDs for links
+
+  // Helper to get unique link ID
+  function linkId(link) {
+    const src = typeof link.source === 'object' ? link.source.id : link.source;
+    const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+    return `${src}--${tgt}`;
+  }
 
   // Create graph instance
   const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
@@ -44,8 +51,8 @@
     .backgroundColor("#0b0e2c")
     .nodeAutoColorBy("id")
     .nodeLabel(node => node.id)
-    .linkWidth(link => highlightedLinks.has(link) ? 6 : 0.5)
-    .linkColor(link => highlightedLinks.has(link) ? 'cyan' : '#ffffff')
+    .linkWidth(link => highlightedLinkIds.has(linkId(link)) ? 6 : 2) // 2 for normal, 6 for highlighted
+    .linkColor(link => highlightedLinkIds.has(linkId(link)) ? 'cyan' : '#ffffff')
     .nodeThreeObject(node => {
       const group = new THREE.Group();
 
@@ -69,7 +76,7 @@
     .nodeThreeObjectExtend(true)
     .onNodeClick(node => {
       highlightedNodeIds.clear();
-      highlightedLinks.clear();
+      highlightedLinkIds.clear();
 
       highlightedNodeIds.add(node.id);
 
@@ -80,10 +87,10 @@
 
         if (src === node.id) {
           highlightedNodeIds.add(tgt); // neighbor
-          highlightedLinks.add(link);
+          highlightedLinkIds.add(linkId(link));
         } else if (tgt === node.id) {
           highlightedNodeIds.add(src); // neighbor
-          highlightedLinks.add(link);
+          highlightedLinkIds.add(linkId(link));
         }
       });
 
