@@ -2,133 +2,164 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>UML Interactive Graph</title>
+  <title>Interactive UML Graph</title>
   <style>
-    body { margin: 0; background: #0b0e2c; }
-    #3d-graph { width: 100vw; height: 100vh; }
+    body { margin: 0; background: #000; }
+    #3d-graph { width: 100vw; height: 100vh; display: block; }
   </style>
-
-  <!-- ✅ Load required libraries in correct order -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
 </head>
-
 <body>
   <div id="3d-graph"></div>
+  <div id="info-box" style="position:fixed;top:20px;right:20px;min-width:220px;max-width:300px;background:#181818;color:#fff;padding:16px 20px;border-radius:8px;box-shadow:0 2px 8px #0006;font-size:18px;z-index:10;display:none"></div>
 
- <script>
-  const gData = {
-    nodes: [
-      { id: 'Application' },
-      { id: 'User' },
-      { id: 'Organisation' },
-      { id: 'Role' },
-      { id: 'Permission' },
-      { id: 'AuditLog' }
-    ],
-    links: [
-      { source: 'Application', target: 'User' },
-      { source: 'User', target: 'Role' },
-      { source: 'Role', target: 'Permission' },
-      { source: 'Organisation', target: 'User' },
-      { source: 'Application', target: 'AuditLog' }
-    ]
-  };
+  <script>
+    // UML-inspired graph data
+    const gData = {
+      nodes: [
+        // Main objects (colored boxes)
+        { id: 'Site', group: 'main' },
+        { id: 'Building', group: 'main' },
+        { id: 'Body', group: 'main' },
+        { id: 'Core', group: 'main' },
+        { id: 'Skin', group: 'main' },
+        { id: 'Top', group: 'main' },
+        { id: 'Base', group: 'main' },
 
-  let highlightedNodeIds = new Set();
-  let highlightedLinks = new Set(); // Store link objects directly
+        // Attribute nodes for Site
+        { id: 'Site.location', label: 'location: int', group: 'attr' },
+        { id: 'Site.method', label: 'method(type): type', group: 'attr' },
 
-  // Create graph instance
-  const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
-    .graphData(gData)
-    .backgroundColor("#0b0e2c")
-    .nodeAutoColorBy("id")
-    .nodeLabel(node => node.id)
-    .linkWidth(link => {
-      if (highlightedLinks.size === 0) return 2;
-      return highlightedLinks.has(link) ? 6 : 0.5;
-    })
-    .linkColor(link => {
-      if (highlightedLinks.size === 0) return '#ffffff';
-      return highlightedLinks.has(link) ? 'cyan' : '#ffffff';
-    })
-    .nodeThreeObject(node => {
-      const group = new THREE.Group();
+        // Attribute nodes for Building
+        { id: 'Building.location', label: 'location: int', group: 'attr' },
+        { id: 'Building.function', label: 'function: string', group: 'attr' },
+        { id: 'Building.method', label: 'method(type): type', group: 'attr' },
 
-      // Node sphere
-      const geometry = new THREE.SphereGeometry(4, 32, 32);
-      const material = new THREE.MeshStandardMaterial({
-        color: highlightedNodeIds.has(node.id) ? 'orange' : node.color
+        // Attribute nodes for Body
+        { id: 'Body.volume', label: 'volume: int', group: 'attr' },
+        { id: 'Body.method', label: 'method(type): type', group: 'attr' },
+
+        // Attribute nodes for Core
+        { id: 'Core.location', label: 'location: int', group: 'attr' },
+        { id: 'Core.method', label: 'method(type): type', group: 'attr' },
+
+        // Attribute nodes for Skin
+        { id: 'Skin.thickness', label: 'thickness: int', group: 'attr' },
+        { id: 'Skin.method', label: 'method(type): type', group: 'attr' },
+
+        // Attribute nodes for Top
+        { id: 'Top.Roofing', label: 'Roofing: type', group: 'attr' },
+        { id: 'Top.method', label: 'method(type): type', group: 'attr' },
+
+        // Attribute nodes for Base
+        { id: 'Base.Entrance', label: 'Entrance: type', group: 'attr' },
+        { id: 'Base.method', label: 'method(type): type', group: 'attr' }
+      ],
+      links: [
+        // Main structure (composition/aggregation)
+        { source: 'Site', target: 'Building' },
+        { source: 'Building', target: 'Body' },
+        { source: 'Body', target: 'Core' },
+        { source: 'Body', target: 'Skin' },
+        { source: 'Body', target: 'Top' },
+        { source: 'Body', target: 'Base' },
+
+        // Attribute links for Site
+        { source: 'Site', target: 'Site.location' },
+        { source: 'Site', target: 'Site.method' },
+
+        // Attribute links for Building
+        { source: 'Building', target: 'Building.location' },
+        { source: 'Building', target: 'Building.function' },
+        { source: 'Building', target: 'Building.method' },
+
+        // Attribute links for Body
+        { source: 'Body', target: 'Body.volume' },
+        { source: 'Body', target: 'Body.method' },
+
+        // Attribute links for Core
+        { source: 'Core', target: 'Core.location' },
+        { source: 'Core', target: 'Core.method' },
+
+        // Attribute links for Skin
+        { source: 'Skin', target: 'Skin.thickness' },
+        { source: 'Skin', target: 'Skin.method' },
+
+        // Attribute links for Top
+        { source: 'Top', target: 'Top.Roofing' },
+        { source: 'Top', target: 'Top.method' },
+
+        // Attribute links for Base
+        { source: 'Base', target: 'Base.Entrance' },
+        { source: 'Base', target: 'Base.method' }
+      ]
+    };
+
+    const highlightNodes = new Set();
+    const highlightLinks = new Set();
+    let hoverNode = null;
+    let selectedNode = null;
+
+    const infoBox = document.getElementById('info-box');
+
+    const Graph = ForceGraph3D()
+      (document.getElementById('3d-graph'))
+      .graphData(gData)
+      .nodeAutoColorBy(node => node.group === 'main' ? node.id : 'attr')
+      .nodeLabel(node => node.label || node.id)
+      .linkWidth(link => highlightLinks.has(link) ? 2 : 0.5)
+      .linkColor(link => highlightLinks.has(link) ? '#ffffff' : '#ffffff')
+      .nodeColor(undefined)
+      .onNodeClick(node => {
+        highlightNodes.clear();
+        highlightLinks.clear();
+
+        // Find connected nodes (using runtime node objects for highlighting)
+        const connectedNodes = new Set();
+        Graph.graphData().links.forEach(link => {
+          const src = typeof link.source === 'object' ? link.source.id : link.source;
+          const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+          if (src === node.id) {
+            connectedNodes.add(tgt);
+            highlightLinks.add(link);
+          } else if (tgt === node.id) {
+            connectedNodes.add(src);
+            highlightLinks.add(link);
+          }
+        });
+
+        highlightNodes.add(node);
+        selectedNode = node;
+
+        // Refresh
+        Graph.nodeColor(undefined);
+        Graph.linkWidth(Graph.linkWidth());
+        Graph.linkColor(Graph.linkColor());
+
+        // Show info box
+        infoBox.style.display = 'block';
+        infoBox.innerHTML = `<b>Node selected:</b> ${node.label || node.id}<br><b>Connected node${connectedNodes.size === 1 ? '' : 's'}:</b> ${[...connectedNodes].join(', ')}`;
+
+        // Move camera to focus on node
+        const distance = 80;
+        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+        Graph.cameraPosition(
+          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+          node,
+          3000
+        );
       });
-      const sphere = new THREE.Mesh(geometry, material);
-      group.add(sphere);
 
-      // Add label if highlighted (clicked or neighbor)
-      if (highlightedNodeIds.has(node.id)) {
-        const label = makeTextSprite(node.id);
-        label.position.set(0, 10, 0);
-        group.add(label);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        infoBox.style.display = 'none';
+        highlightLinks.clear();
+        highlightNodes.clear();
+        selectedNode = null;
+        Graph.linkWidth(Graph.linkWidth());
+        Graph.linkColor(Graph.linkColor());
       }
-
-      return group;
-    })
-    .nodeThreeObjectExtend(true)
-    .onNodeClick(node => {
-      highlightedNodeIds.clear();
-      highlightedLinks.clear();
-
-      highlightedNodeIds.add(node.id);
-
-      // Use gData.links (original data, always string ids) to find neighbors,
-      // but add the actual runtime link objects from Graph.graphData().links
-      const runtimeLinks = Graph.graphData().links;
-
-      gData.links.forEach((origLink, i) => {
-        const src = origLink.source;
-        const tgt = origLink.target;
-        if (src === node.id) {
-          highlightedNodeIds.add(tgt);
-          highlightedLinks.add(runtimeLinks[i]);
-        } else if (tgt === node.id) {
-          highlightedNodeIds.add(src);
-          highlightedLinks.add(runtimeLinks[i]);
-        }
-      });
-
-      // Refresh visuals
-      Graph.nodeThreeObject(Graph.nodeThreeObject);
-      Graph.linkWidth(Graph.linkWidth);
-      Graph.linkColor(Graph.linkColor);
-      if (typeof Graph.refresh === 'function') Graph.refresh();
-
-      // Zoom to selected node
-      const distance = 40;
-      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-      Graph.cameraPosition(
-        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-        node,
-        3000
-      );
-    })
-    .lights([
-      new THREE.AmbientLight(0xcccccc, 1.5),
-      new THREE.DirectionalLight(0xffffff, 0.6)
-    ]);
-
-  function makeTextSprite(text) {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    context.font = "24px Arial";
-    context.fillStyle = "white";
-    context.fillText(text, 4, 24);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture });
-    const sprite = new THREE.Sprite(material);
-    sprite.scale.set(30, 15, 1.0);
-    return sprite;
-  }
-</script>
-
+    });
+  </script>
 </body>
 </html>
