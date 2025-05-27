@@ -1,3 +1,4 @@
+// graph.js
 function createGraph(data) {
     const ctx = document.getElementById('myChart').getContext('2d');
     const myChart = new Chart(ctx, {
@@ -24,11 +25,3 @@ function createGraph(data) {
 
     return myChart;
 }
-
-function updateGraph(myChart, newData) {
-    myChart.data.labels = newData.labels;
-    myChart.data.datasets[0].data = newData.values;
-    myChart.update();
-}
-
-export { createGraph, updateGraph };
