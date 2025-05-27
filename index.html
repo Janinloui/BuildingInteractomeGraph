@@ -1,16 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive Graph</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="src/graph.js"></script>
-  <script src="src/index.js" defer></script>
+  <meta charset="utf-8">
+  <title>Interactive UML Graph</title>
+  <style>
+    body { margin: 0; background: #000; }
+    #3d-graph { width: 100vw; height: 100vh; display: block; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
 </head>
 <body>
-    <h1>Interactive Graph</h1>
-    <canvas id="myChart" width="400" height="200"></canvas>
+  <div id="3d-graph"></div>
+
+  <script>
+    // Dummy graph data (based on typical UML components)
+    const gData = {
+      nodes: [
+        { id: 'Application' },
+        { id: 'User' },
+        { id: 'Organisation' },
+        { id: 'Role' },
+        { id: 'Permission' },
+        { id: 'AuditLog' }
+      ],
+      links: [
+        { source: 'Application', target: 'User' },
+        { source: 'User', target: 'Role' },
+        { source: 'Role', target: 'Permission' },
+        { source: 'Organisation', target: 'User' },
+        { source: 'Application', target: 'AuditLog' }
+      ]
+    };
+
+    const highlightNodes = new Set();
+    const highlightLinks = new Set();
+    let hoverNode = null;
+
+    const Graph = ForceGraph3D()
+      (document.getElementById('3d-graph'))
+      .graphData(gData)
+      .nodeAutoColorBy('id')
+      .nodeLabel(node => node.id)
+      .linkWidth(link => highlightLinks.has(link) ? 4 : 1)
+      .linkColor(link => highlightLinks.has(link) ? 'cyan' : 'rgba(255,255,255,0.2)')
+      .nodeColor(node => highlightNodes.has(node) ? 'orange' : node.color)
+      .onNodeClick(node => {
+        // Highlight neighbors
+        highlightNodes.clear();
+        highlightLinks.clear();
+
+        gData.links.forEach(link => {
+          if (link.source.id === node.id) {
+            highlightNodes.add(link.target);
+            highlightLinks.add(link);
+          } else if (link.target.id === node.id) {
+            highlightNodes.add(link.source);
+            highlightLinks.add(link);
+          }
+        });
+
+        highlightNodes.add(node); // also highlight the selected node
+
+        // Refresh
+        Graph.nodeColor(Graph.nodeColor());
+        Graph.linkWidth(Graph.linkWidth());
+        Graph.linkColor(Graph.linkColor());
+
+        // Move camera to focus on node
+        const distance = 40;
+        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+        Graph.cameraPosition(
+          { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+          node,
+          3000
+        );
+      });
+  </script>
 </body>
 </html>
 
