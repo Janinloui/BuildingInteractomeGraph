@@ -4,144 +4,104 @@
   <meta charset="utf-8">
   <title>Interactive UML Graph</title>
   <style>
-    body { margin: 0; background: #000; }
+    body { margin: 0; background: #f8f8f8; }
     #3d-graph { width: 100vw; height: 100vh; display: block; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
+  <script src="js/graph-data.js"></script>
 </head>
 <body>
   <div id="3d-graph"></div>
-  <div id="info-box" style="position:fixed;top:20px;right:20px;min-width:220px;max-width:300px;background:#181818;color:#fff;padding:16px 20px;border-radius:8px;box-shadow:0 2px 8px #0006;font-size:18px;z-index:10;display:none"></div>
+  <div id="info-box" style="
+    position:fixed;
+    top:32px;
+    right:32px;
+    min-width:240px;
+    max-width:340px;
+    background:#fff;
+    color:#222;
+    padding:20px 28px;
+    border-radius:12px;
+    box-shadow:0 4px 24px #0002;
+    font-size:18px;
+    z-index:10;
+    display:none;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    border: 1px solid #e0e0e0;
+    letter-spacing: 0.01em;
+    line-height: 1.6;
+  "></div>
 
   <script>
-    // UML-inspired graph data
-    const gData = {
-      nodes: [
-        // Main objects (colored boxes)
-        { id: 'Site', group: 'main' },
-        { id: 'Building', group: 'main' },
-        { id: 'Body', group: 'main' },
-        { id: 'Core', group: 'main' },
-        { id: 'Skin', group: 'main' },
-        { id: 'Top', group: 'main' },
-        { id: 'Base', group: 'main' },
-
-        // Attribute nodes for Site
-        { id: 'Site.location', label: 'location: int', group: 'attr' },
-        { id: 'Site.method', label: 'method(type): type', group: 'attr' },
-
-        // Attribute nodes for Building
-        { id: 'Building.location', label: 'location: int', group: 'attr' },
-        { id: 'Building.function', label: 'function: string', group: 'attr' },
-        { id: 'Building.method', label: 'method(type): type', group: 'attr' },
-
-        // Attribute nodes for Body
-        { id: 'Body.volume', label: 'volume: int', group: 'attr' },
-        { id: 'Body.method', label: 'method(type): type', group: 'attr' },
-
-        // Attribute nodes for Core
-        { id: 'Core.location', label: 'location: int', group: 'attr' },
-        { id: 'Core.method', label: 'method(type): type', group: 'attr' },
-
-        // Attribute nodes for Skin
-        { id: 'Skin.thickness', label: 'thickness: int', group: 'attr' },
-        { id: 'Skin.method', label: 'method(type): type', group: 'attr' },
-
-        // Attribute nodes for Top
-        { id: 'Top.Roofing', label: 'Roofing: type', group: 'attr' },
-        { id: 'Top.method', label: 'method(type): type', group: 'attr' },
-
-        // Attribute nodes for Base
-        { id: 'Base.Entrance', label: 'Entrance: type', group: 'attr' },
-        { id: 'Base.method', label: 'method(type): type', group: 'attr' }
-      ],
-      links: [
-        // Main structure (composition/aggregation)
-        { source: 'Site', target: 'Building' },
-        { source: 'Building', target: 'Body' },
-        { source: 'Body', target: 'Core' },
-        { source: 'Body', target: 'Skin' },
-        { source: 'Body', target: 'Top' },
-        { source: 'Body', target: 'Base' },
-
-        // Attribute links for Site
-        { source: 'Site', target: 'Site.location' },
-        { source: 'Site', target: 'Site.method' },
-
-        // Attribute links for Building
-        { source: 'Building', target: 'Building.location' },
-        { source: 'Building', target: 'Building.function' },
-        { source: 'Building', target: 'Building.method' },
-
-        // Attribute links for Body
-        { source: 'Body', target: 'Body.volume' },
-        { source: 'Body', target: 'Body.method' },
-
-        // Attribute links for Core
-        { source: 'Core', target: 'Core.location' },
-        { source: 'Core', target: 'Core.method' },
-
-        // Attribute links for Skin
-        { source: 'Skin', target: 'Skin.thickness' },
-        { source: 'Skin', target: 'Skin.method' },
-
-        // Attribute links for Top
-        { source: 'Top', target: 'Top.Roofing' },
-        { source: 'Top', target: 'Top.method' },
-
-        // Attribute links for Base
-        { source: 'Base', target: 'Base.Entrance' },
-        { source: 'Base', target: 'Base.method' }
-      ]
-    };
-
     const highlightNodes = new Set();
     const highlightLinks = new Set();
     let hoverNode = null;
     let selectedNode = null;
+    const neighborNodes = new Set();
 
     const infoBox = document.getElementById('info-box');
 
     const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
       .graphData(gData)
+      .backgroundColor("#fff")
       .nodeAutoColorBy(node => node.group === 'main' ? node.id : 'attr')
       .nodeLabel(node => node.label || node.id)
-      .linkWidth(link => highlightLinks.has(link) ? 2 : 0.5)
-      .linkColor(link => highlightLinks.has(link) ? '#ffffff' : '#ffffff')
-      .nodeColor(undefined)
+      .linkWidth(link => highlightLinks.has(link) ? 1.5 : 0.5)
+      .linkColor(link => highlightLinks.has(link) ? '#0f0' : '#000')
+      .nodeColor(node =>
+        selectedNode && node.id === selectedNode.id
+          ? '#7ecb7e' // light green for selected node
+          : neighborNodes.has(node)
+            ? '#006400' // dark green for neighbors
+            : (node.group === 'main'
+                ? '#222' // dark for main nodes
+                : '#bbb' // grey for attribute nodes
+              )
+      )
       .onNodeClick(node => {
         highlightNodes.clear();
         highlightLinks.clear();
+        neighborNodes.clear();
 
-        // Find connected nodes (using runtime node objects for highlighting)
-        const connectedNodes = new Set();
+        // Find connected nodes and their relation types
+        const connected = [];
         Graph.graphData().links.forEach(link => {
           const src = typeof link.source === 'object' ? link.source.id : link.source;
           const tgt = typeof link.target === 'object' ? link.target.id : link.target;
           if (src === node.id) {
-            connectedNodes.add(tgt);
+            connected.push(`(${link.type ? capitalize(link.type) : 'Link'}, ${tgt})`);
             highlightLinks.add(link);
+            const neighbor = Graph.graphData().nodes.find(n => n.id === tgt);
+            if (neighbor) neighborNodes.add(neighbor);
           } else if (tgt === node.id) {
-            connectedNodes.add(src);
+            connected.push(`(${link.type ? capitalize(link.type) : 'Link'}, ${src})`);
             highlightLinks.add(link);
+            const neighbor = Graph.graphData().nodes.find(n => n.id === src);
+            if (neighbor) neighborNodes.add(neighbor);
           }
         });
 
-        highlightNodes.add(node);
         selectedNode = node;
 
         // Refresh
-        Graph.nodeColor(undefined);
+        Graph.nodeColor(Graph.nodeColor());
         Graph.linkWidth(Graph.linkWidth());
         Graph.linkColor(Graph.linkColor());
 
         // Show info box
         infoBox.style.display = 'block';
-        infoBox.innerHTML = `<b>Node selected:</b> ${node.label || node.id}<br><b>Connected node${connectedNodes.size === 1 ? '' : 's'}:</b> ${[...connectedNodes].join(', ')}`;
+        infoBox.innerHTML = `
+          <div style="font-weight:600;font-size:20px;margin-bottom:8px;">${node.label || node.id}</div>
+          <div style="font-weight:400;font-size:16px;margin-bottom:6px;color:#666;">Connected nodes:</div>
+          <div style="font-size:16px;">
+            ${connected.map(c => `<div style="margin-bottom:2px;">${c}</div>`).join('')}
+          </div>
+        `;
 
         // Move camera to focus on node
-        const distance = 80;
+        const distance = 180;
         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
         Graph.cameraPosition(
           { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
@@ -150,12 +110,18 @@
         );
       });
 
+    function capitalize(str) {
+      return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+    }
+
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         infoBox.style.display = 'none';
         highlightLinks.clear();
         highlightNodes.clear();
+        neighborNodes.clear();
         selectedNode = null;
+        Graph.nodeColor(Graph.nodeColor());
         Graph.linkWidth(Graph.linkWidth());
         Graph.linkColor(Graph.linkColor());
       }
