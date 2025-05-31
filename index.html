@@ -51,14 +51,16 @@
       .linkWidth(link => highlightLinks.has(link) ? 1.5 : 0.5)
       .linkColor(link => highlightLinks.has(link) ? '#0f0' : '#000')
       .nodeColor(node =>
-        selectedNode && node.id === selectedNode.id
-          ? '#7ecb7e' // light green for selected node
-          : neighborNodes.has(node)
-            ? '#006400' // dark green for neighbors
-            : (node.group === 'main'
-                ? '#222' // dark for main nodes
-                : '#bbb' // grey for attribute nodes
-              )
+        node.id === 'KPI'
+          ? '#d32f2f' // always red for KPI node
+          : selectedNode && node.id === selectedNode.id
+            ? '#7ecb7e' // light green for selected node
+            : neighborNodes.has(node)
+              ? '#006400' // dark green for neighbors
+              : (node.group === 'main'
+                  ? '#222' // dark for main nodes
+                  : '#bbb' // grey for attribute nodes
+                )
       )
       .onNodeClick(node => {
         highlightNodes.clear();
@@ -70,17 +72,29 @@
         Graph.graphData().links.forEach(link => {
           const src = typeof link.source === 'object' ? link.source.id : link.source;
           const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+          let neighborId, direction;
           if (src === node.id) {
-            connected.push(`(${link.type ? capitalize(link.type) : 'Link'}, ${tgt})`);
-            highlightLinks.add(link);
-            const neighbor = Graph.graphData().nodes.find(n => n.id === tgt);
-            if (neighbor) neighborNodes.add(neighbor);
+            neighborId = tgt;
+            direction = 'out';
           } else if (tgt === node.id) {
-            connected.push(`(${link.type ? capitalize(link.type) : 'Link'}, ${src})`);
-            highlightLinks.add(link);
-            const neighbor = Graph.graphData().nodes.find(n => n.id === src);
-            if (neighbor) neighborNodes.add(neighbor);
+            neighborId = src;
+            direction = 'in';
+          } else {
+            return;
           }
+          const neighbor = Graph.graphData().nodes.find(n => n.id === neighborId);
+          if (!neighbor) return;
+          neighborNodes.add(neighbor);
+
+          if (link.type === 'attribute') {
+            // Show only the attribute name, not the full id
+            const attrName = neighbor.label || (neighbor.id.split('.').pop());
+            connected.push(`(Attribute, ${attrName})`);
+          } else {
+            // Show just the object name (label or id)
+            connected.push(neighbor.label || neighbor.id);
+          }
+          highlightLinks.add(link);
         });
 
         selectedNode = node;
