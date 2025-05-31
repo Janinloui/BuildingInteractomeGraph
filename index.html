@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
   <script src="js/graph-data.js"></script>
+  <script src="js/graph-path.js"></script>
 </head>
 <body>
   <div id="3d-graph"></div>
@@ -17,8 +18,8 @@
     position:fixed;
     top:32px;
     right:32px;
-    min-width:240px;
-    max-width:340px;
+    min-width:320px;
+    max-width:480px;
     background:#fff;
     color:#222;
     padding:20px 28px;
@@ -31,90 +32,126 @@
     border: 1px solid #e0e0e0;
     letter-spacing: 0.01em;
     line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    white-space: normal;
+    box-sizing: border-box;
+    overflow-x: auto;
   "></div>
 
-  <script>
-    const highlightNodes = new Set();
-    const highlightLinks = new Set();
-    let hoverNode = null;
-    let selectedNode = null;
-    const neighborNodes = new Set();
+<script>
+  const highlightNodes = new Set();
+  const highlightLinkIds = new Set();
+  let hoverNode = null;
+  let selectedNode = null;
+  const neighborNodes = new Set();
 
-    const infoBox = document.getElementById('info-box');
+  const infoBox = document.getElementById('info-box');
 
-    const Graph = ForceGraph3D()
-      (document.getElementById('3d-graph'))
-      .graphData(gData)
-      .backgroundColor("#fff")
-      .nodeAutoColorBy(node => node.group === 'main' ? node.id : 'attr')
-      .nodeLabel(node => node.label || node.id)
-      .linkWidth(link => highlightLinks.has(link) ? 1.5 : 0.5)
-      .linkColor(link => highlightLinks.has(link) ? '#0f0' : '#000')
-      .nodeColor(node =>
-        node.id === 'KPI'
-          ? '#d32f2f' // always red for KPI node
+  const Graph = ForceGraph3D()
+    (document.getElementById('3d-graph'))
+    .graphData(gData)
+    .backgroundColor("#fff")
+    .nodeAutoColorBy(node => node.group === 'main' ? node.id : 'attr')
+    .nodeLabel(node => node.label || node.id)
+    .linkWidth(link => {
+      const srcId = typeof link.source === 'object' ? link.source.id : link.source;
+      const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+      return highlightLinkIds.has(`${srcId}|${tgtId}`) ? 1.5 : 0.5;
+    })
+    .linkColor(link => {
+      const srcId = typeof link.source === 'object' ? link.source.id : link.source;
+      const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+      return highlightLinkIds.has(`${srcId}|${tgtId}`) ? '#0f0' : '#000';
+    })
+    .nodeColor(node =>
+      node.id === 'KPI'
+        ? '#d32f2f'
+        : (window.pathHighlightConfig && window.pathHighlightConfig[node.id])
+          ? '#ffd600' // yellow for nodes with defined paths
           : selectedNode && node.id === selectedNode.id
-            ? '#7ecb7e' // light green for selected node
+            ? '#7ecb7e'
             : neighborNodes.has(node)
-              ? '#006400' // dark green for neighbors
+              ? '#006400'
               : (node.group === 'main'
-                  ? '#222' // dark for main nodes
-                  : '#bbb' // grey for attribute nodes
-                )
-      )
-      .onNodeClick(node => {
-        highlightNodes.clear();
-        highlightLinks.clear();
-        neighborNodes.clear();
+                  ? '#222'
+                  : '#bbb')
+    )
+    .onNodeClick(node => {
+      highlightNodes.clear();
+      highlightLinkIds.clear();
+      neighborNodes.clear();
 
-        // Find connected nodes and their relation types
-        const connected = [];
-        Graph.graphData().links.forEach(link => {
-          const src = typeof link.source === 'object' ? link.source.id : link.source;
-          const tgt = typeof link.target === 'object' ? link.target.id : link.target;
-          let neighborId, direction;
-          if (src === node.id) {
-            neighborId = tgt;
-            direction = 'out';
-          } else if (tgt === node.id) {
-            neighborId = src;
-            direction = 'in';
-          } else {
-            return;
-          }
-          const neighbor = Graph.graphData().nodes.find(n => n.id === neighborId);
-          if (!neighbor) return;
-          neighborNodes.add(neighbor);
+      // --- Configurable path highlight logic ---
+      // Use config from graph-path.js
+      if (window.pathHighlightConfig && window.pathHighlightConfig[node.id]) {
+        let allPaths = [];
+        let allLinks = new Set();
+        let allNodes = new Set();
+        let infoBoxPaths = [];
 
-          if (link.type === 'attribute') {
-            // Show only the attribute name, not the full id
-            const attrName = neighbor.label || (neighbor.id.split('.').pop());
-            connected.push(`(Attribute, ${attrName})`);
-          } else {
-            // Show just the object name (label or id)
-            connected.push(neighbor.label || neighbor.id);
+        window.pathHighlightConfig[node.id].forEach(targetId => {
+          const path = findShortestPath(gData, node.id, targetId);
+          if (path.length > 0) {
+            allPaths.push(path);
+            path.forEach(nid => {
+              const n = gData.nodes.find(nn => nn.id === nid);
+              if (n) allNodes.add(n);
+            });
+            for (let i = 0; i < path.length - 1; i++) {
+              const a = path[i], b = path[i + 1];
+              allLinks.add(`${a}|${b}`);
+              allLinks.add(`${b}|${a}`);
+              const nodeA = gData.nodes.find(n => n.id === a);
+              const nodeB = gData.nodes.find(n => n.id === b);
+              if (nodeA) neighborNodes.add(nodeA);
+              if (nodeB) neighborNodes.add(nodeB);
+            }
+            infoBoxPaths.push(
+              path.map(nid => {
+                const n = gData.nodes.find(nn => nn.id === nid);
+                return `<span>${n ? (n.label || n.id) : nid}</span>`;
+              }).join('<span style="color:#0f0;">&#8594;</span>')
+            );
           }
-          highlightLinks.add(link);
         });
 
+        allNodes.forEach(n => highlightNodes.add(n));
+        allLinks.forEach(lid => highlightLinkIds.add(lid));
         selectedNode = node;
 
-        // Refresh
+        infoBox.style.display = 'block';
+        // Compose heading for attribute nodes: Parent Label + Attribute Label
+        let heading = node.label || node.id;
+        if (node.group === 'attr' && node.id.includes('.')) {
+          const parentId = node.id.split('.')[0];
+          const parentNode = gData.nodes.find(n => n.id === parentId);
+          const parentLabel = parentNode ? parentNode.label || parentNode.id : parentId;
+          heading = `${parentLabel} ${node.label || node.id.split('.').pop()}`;
+        }
+        infoBox.innerHTML = `
+          <div style="font-weight:600;font-size:20px;margin-bottom:22px;word-break:keep-all;overflow-wrap:normal;">${heading}</div>
+          <div style="font-weight:400;font-size:16px;margin-bottom:12px;color:#666;">Paths to affected attributes:</div>
+          <div style="font-size:16px;word-break:keep-all;overflow-wrap:normal;">
+            ${infoBoxPaths.map(pathHtml => {
+              // Make the last node in the path bold
+              const parts = pathHtml.split('<span style="color:#0f0;">&#8594;</span>');
+              if (parts.length > 1) {
+                const lastIdx = parts.length - 1;
+                parts[lastIdx] = `<b>${parts[lastIdx]}</b>`;
+                return `<div style="margin-bottom:18px;">${parts.join('<span style="color:#0f0;">&#8594;</span>')}</div>`;
+              } else {
+                // Only one node in path
+                return `<div style="margin-bottom:18px;"><b>${pathHtml}</b></div>`;
+              }
+            }).join('')}
+          </div>
+        `;
+
         Graph.nodeColor(Graph.nodeColor());
         Graph.linkWidth(Graph.linkWidth());
         Graph.linkColor(Graph.linkColor());
 
-        // Show info box
-        infoBox.style.display = 'block';
-        infoBox.innerHTML = `
-          <div style="font-weight:600;font-size:20px;margin-bottom:8px;">${node.label || node.id}</div>
-          <div style="font-weight:400;font-size:16px;margin-bottom:6px;color:#666;">Connected nodes:</div>
-          <div style="font-size:16px;">
-            ${connected.map(c => `<div style="margin-bottom:2px;">${c}</div>`).join('')}
-          </div>
-        `;
-
-        // Move camera to focus on node
         const distance = 180;
         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
         Graph.cameraPosition(
@@ -122,24 +159,24 @@
           node,
           3000
         );
-      });
-
-    function capitalize(str) {
-      return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-    }
-
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        infoBox.style.display = 'none';
-        highlightLinks.clear();
-        highlightNodes.clear();
-        neighborNodes.clear();
-        selectedNode = null;
-        Graph.nodeColor(Graph.nodeColor());
-        Graph.linkWidth(Graph.linkWidth());
-        Graph.linkColor(Graph.linkColor());
+        return;
       }
+
+      // ...existing fallback code for non-path-highlight nodes...
     });
-  </script>
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      infoBox.style.display = 'none';
+      highlightLinkIds.clear();
+      highlightNodes.clear();
+      neighborNodes.clear();
+      selectedNode = null;
+      Graph.nodeColor(Graph.nodeColor());
+      Graph.linkWidth(Graph.linkWidth());
+      Graph.linkColor(Graph.linkColor());
+    }
+  });
+</script>
 </body>
 </html>
