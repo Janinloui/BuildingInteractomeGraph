@@ -1,3 +1,11 @@
+// Thanks https://github.com/Janinloui this rocks :)
+
+// change log
+// grid - renamed to h_seg so not linked to body but horizontal and vert support support structure
+// horizontal support structure renamed to plenum...
+// horizontal support structure renamed to vert...
+
+
 const gData = {
       nodes: [
         // Main objects (colored boxes)
@@ -10,10 +18,10 @@ const gData = {
         { id: 'Top', group: 'main' },
         { id: 'Base', group: 'main' },
         { id: 'Skin', group: 'main' },
-        { id: 'HorizontalSupportStructure', group: 'main' },
-        { id: 'VerticalSupportStructure', group: 'main' },
+        { id: 'Plenum', group: 'main' },
+        { id: 'Vert', group: 'main' },
         { id: 'Shape', group: 'main' },
-        { id: 'Grid', group: 'main' },
+        { id: 'H_Segs', group: 'main' },
         { id: 'Slab', group: 'main' },
         { id: 'Beam', group: 'main' },
         { id: 'Wall', group: 'main' },
@@ -65,9 +73,9 @@ const gData = {
         { id: 'Shape.area', label: 'Area', group: 'attr' },
         { id: 'Shape.boundary', label: 'Boundary', group: 'attr' },
 
-        // Attribute nodes for Grid
-        { id: 'Grid.spacingX', label: 'Spacing X', group: 'attr' },
-        { id: 'Grid.spacingY', label: 'Spacing Y', group: 'attr' },
+        // Attribute nodes for H_Segs
+        { id: 'H_Segs.spacingX', label: 'Spacing X', group: 'attr' },
+        { id: 'H_Segs.spacingY', label: 'Spacing Y', group: 'attr' },
 
         // Attribute nodes for Slab
         { id: 'Slab.capacity', label: 'Capacity', group: 'attr' },
@@ -121,22 +129,26 @@ const gData = {
         { source: 'Building', target: 'Body'},
         { source: 'Building', target: 'KPI'},
         { source: 'Building', target: 'Top'},
-        { source: 'Building', target: 'Base'},
-        { source: 'Building', target: 'Skin'},
-        { source: 'Skin', target: 'Grid'}, // <-- fixed typo: was 'skin'
+
+        { source: 'Body', target: 'Base'},
         { source: 'Body', target: 'Core'},
         { source: 'Body', target: 'Floors'},
+        { source: 'Body', target: 'Skin'},
+
         { source: 'Floors', target: 'Spaces'},
-        { source: 'Floors', target: 'HorizontalSupportStructure'},
-        { source: 'Floors', target: 'VerticalSupportStructure'},
-        { source: 'Core', target: 'Shape'},
+        { source: 'Floors', target: 'Plenum'},
+        { source: 'Floors', target: 'Vert'},
+
+    
         { source: 'Spaces', target: 'Shape'},
-        { source: 'HorizontalSupportStructure', target: 'Grid'}, // <-- fixed typo: was 'HorizontalSuppostStructure'
-        { source: 'HorizontalSupportStructure', target: 'ArchFloorFinish'},
-        { source: 'HorizontalSupportStructure', target: 'Slab'},
-        { source: 'HorizontalSupportStructure', target: 'Beam'},
-        { source: 'VerticalSupportStructure', target: 'Wall'},
-        { source: 'VerticalSupportStructure', target: 'Column'},
+
+        { source: 'Plenum', target: 'H_Segs'}, 
+        { source: 'Plenum', target: 'ArchFloorFinish'},
+        { source: 'Plenum', target: 'Slab'},
+        { source: 'Plenum', target: 'Beam'},
+
+        { source: 'Vert', target: 'Wall'},
+        { source: 'Vert', target: 'Column'},
 
 
         // Attribute links for Site
@@ -183,9 +195,9 @@ const gData = {
         { source: 'Shape', target: 'Shape.area', type: 'attribute' },
         { source: 'Shape', target: 'Shape.boundary', type: 'attribute' },
 
-        // Attribute links for Grid
-        { source: 'Grid', target: 'Grid.spacingX', type: 'attribute' },
-        { source: 'Grid', target: 'Grid.spacingY', type: 'attribute' },
+        // Attribute links for H_Segs
+        { source: 'H_Segs', target: 'H_Segs.spacingX', type: 'attribute' },
+        { source: 'H_Segs', target: 'H_Segs.spacingY', type: 'attribute' },
 
         // Attribute links for Slab
         { source: 'Slab', target: 'Slab.capacity', type: 'attribute' },
