@@ -13,6 +13,7 @@ const gData = {
         { id: 'Skin', group: 'main' },
         { id: 'Plenum', group: 'main' },
         { id: 'Vert', group: 'main' },
+        { id: 'Grid', group: 'main' },
         { id: 'Shape', group: 'main' },
         { id: 'H_Segs', group: 'main' },
         { id: 'Slab', group: 'main' },
