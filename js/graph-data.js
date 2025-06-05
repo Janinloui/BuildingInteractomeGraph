@@ -120,12 +120,12 @@ const gData = {
         { source: 'Site', target: 'Building'},
         { source: 'Building', target: 'Body'},
         { source: 'Building', target: 'KPI'},
-        { source: 'Building', target: 'Top'},
         { source: 'Building', target: 'Base'},
         { source: 'Building', target: 'Skin'},
         { source: 'Skin', target: 'Grid'}, // <-- fixed typo: was 'skin'
         { source: 'Body', target: 'Core'},
         { source: 'Body', target: 'Floors'},
+        { source: 'Body', target: 'Top'},
         { source: 'Floors', target: 'Spaces'},
         { source: 'Floors', target: 'HorizontalSupportStructure'},
         { source: 'Floors', target: 'VerticalSupportStructure'},
