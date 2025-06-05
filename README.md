@@ -1,4 +1,4 @@
-# Interactive Graph Project
+# Interactive "Buidling Interactome"
 
 This project is designed to create and display an interactive graph to render an "Interactome" of the buidling design domain. It utilizes data and configuration generated in `graph.js` and renders the graph in the browser. It is based on the 3D Force graph web representation by: Copyright (c) 2017 Vasco Asturiano.
 
