@@ -1,42 +1,21 @@
 # Interactive Graph Project
 
-This project is designed to create and display an interactive graph using JavaScript. It utilizes data and configuration generated in `graph.js` and renders the graph in the browser.
+This project is designed to create and display an interactive graph to render an "Interactome" of the buidling design domain. It utilizes data and configuration generated in `graph.js` and renders the graph in the browser. It is based on the 3D Force graph web representation by: Copyright (c) 2017 Vasco Asturiano.
 
 ## Project Structure
 
 ```
 interactive-graph
 ├── src
-│   ├── index.js        # Main entry point for the application
-│   └── graph.js        # Generates data and configuration for the graph
+│   ├── graph-data.js        # Main entry point for setting up the graph nodes and edges
+│   └── graph-path.js        # Main entry point for setting up the interactome pathways
 ├── public
 │   └── index.html      # HTML template for the application
 ├── package.json        # Configuration file for npm
 └── README.md           # Documentation for the project
 ```
 
-## Setup Instructions
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/yourusername/interactive-graph.git
-   cd interactive-graph
-   ```
-
-2. **Install Dependencies**
-   Make sure you have Node.js installed. Then run:
-   ```bash
-   npm install
-   ```
-
-3. **Run the Application**
-   You can start the application using:
-   ```bash
-   npm start
-   ```
-
-4. **Open in Browser**
-   Navigate to `http://localhost:3000` in your web browser to view the interactive graph.
 
 ## Usage
 
@@ -46,7 +25,7 @@ interactive-graph
 
 ## Contributing
 
-Feel free to submit issues or pull requests if you have suggestions or improvements for the project.
+Feel free to submit issues or pull requests if you have suggestions or improvements for the project. 
 
 ## License
 
