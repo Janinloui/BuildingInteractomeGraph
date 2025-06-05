@@ -1,10 +1,3 @@
-// Thanks https://github.com/Janinloui this rocks :)
-
-// change log
-// grid - renamed to h_seg so not linked to body but horizontal and vert support support structure
-// horizontal support structure renamed to plenum...
-// horizontal support structure renamed to vert...
-
 
 const gData = {
       nodes: [
